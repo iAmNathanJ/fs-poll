@@ -1,76 +1,27 @@
-import { walk, WalkOptions, delay } from "./deps.ts";
+import {
+  poll,
+  WatchOptions,
+  FileEvent,
+  FileEventBatch
+} from "./poll.ts";
 
-export type FileEvent = {
-  type: "added" | "changed" | "removed";
-  path: string;
+type Options = WatchOptions & {
+  handle: (e: FileEvent | FileEventBatch) => void;
 };
 
-export type WatchOptions = {
-  root: string;
-  initial?: boolean;
-  interval?: number;
-  walkOptions?: WalkOptions;
-};
+export function watch(opts: Options) {
+  let cancelled = false;
 
-// todo: make cancellable
-export async function* watch({
-  root,
-  initial = false,
-  interval = 100,
-  walkOptions = {
-    includeDirs: false,
-    exts: [".js", ".ts", ".tsx"]
-  }
-}: WatchOptions): AsyncGenerator<FileEvent> {
-  let files = await collectFiles(root, walkOptions);
-  let latestFiles;
-  // todo: add options for batched changes
-  // let eventBatch;
-
-  if (initial) {
-    for (const [filename] of files) {
-      yield { type: "added", path: filename };
+  (async function watchFiles() {
+    for await (const fileEvent of poll(opts)) {
+      if (cancelled) break;
+      opts.handle(fileEvent);
     }
-  }
+  })();
 
-  while (true) {
-    latestFiles = await collectFiles(root, walkOptions);
-
-    for (const [filename, info] of latestFiles) {
-      if (!files.has(filename)) {
-        yield { type: "added", path: filename };
-        files.delete(filename);
-      } else if (files.get(filename).modified !== info.modified) {
-        yield { type: "changed", path: filename };
-        files.delete(filename);
-      }
+  return {
+    cancel(): void {
+      cancelled = true;
     }
-
-    for (const [filename] of files) {
-      if (!latestFiles.has(filename)) {
-        yield { type: "removed", path: filename };
-      }
-    }
-
-    files = latestFiles;
-    await delay(interval);
-  }
-}
-
-type FileMap = Map<string, Deno.FileInfo>;
-
-async function collectFiles(
-  root: string,
-  options: WalkOptions
-): Promise<FileMap> {
-  const walkResults = walk(root, {
-    includeDirs: false,
-    exts: [".js", ".ts", ".tsx"],
-    ...options
-  });
-  const files: FileMap = new Map();
-  for await (const { filename, info } of walkResults) {
-    files.set(filename, info);
-  }
-  return files;
+  };
 }
