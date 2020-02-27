@@ -3,7 +3,7 @@
 A simple, polling file watcher for [Deno]. Probably don't use this. Deno will support [fsEvents] in the very near future.
 
 ```ts
-import { watch } from "https://cdn.jsdelivr.net/gh/iamnathanj/fs-poll@1.0.0/mod.ts";
+import { watch } from "https://cdn.jsdelivr.net/gh/iamnathanj/fs-poll@v1.0.0/mod.ts";
 ```
 
 ## Usage
