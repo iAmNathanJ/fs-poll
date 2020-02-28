@@ -11,7 +11,7 @@ export type FileEventBatch = {
   [key in EventType]: string[];
 };
 
-export type WatchOptions = {
+export type PollOptions = {
   root?: string;
   batch?: boolean;
   interval?: number;
@@ -28,7 +28,7 @@ export async function* poll({
   batch = false,
   interval = 100,
   walkOptions
-}: WatchOptions = {}): AsyncGenerator<FileEvent | FileEventBatch> {
+}: PollOptions = {}): AsyncGenerator<FileEvent | FileEventBatch> {
   const finalWalkOptions = { ...defaultWalkOptions, ...walkOptions };
   let files = await collectFiles(root, finalWalkOptions);
   let eventBatch = new EventBatch();

@@ -1,15 +1,15 @@
 import {
   poll,
-  WatchOptions,
+  PollOptions,
   FileEvent,
   FileEventBatch
 } from "./poll.ts";
 
-type Options = WatchOptions & {
-  handle: (e: FileEvent | FileEventBatch) => void;
+export type WatchOptions = PollOptions & {
+  handle: (e: FileEvent | FileEventBatch) => any;
 };
 
-export function watch(opts: Options) {
+export function watch(opts: WatchOptions) {
   let cancelled = false;
 
   (async function watchFiles() {
