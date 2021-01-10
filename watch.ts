@@ -1,27 +1,23 @@
-import {
-  poll,
-  PollOptions,
-  FileEvent,
-  FileEventBatch
-} from "./poll.ts";
+import { FileEvent, FileEventBatch, poll, PollOptions } from "./poll.ts";
 
 export type WatchOptions = PollOptions & {
-  handle: (e: FileEvent | FileEventBatch) => any;
+  handle: (e: FileEvent | FileEventBatch) => unknown;
 };
 
 export function watch(opts: WatchOptions) {
-  let cancelled = false;
+  const controller = new AbortController();
+  const watcher = poll({ ...opts, signal: controller.signal });
 
-  (async function watchFiles() {
-    for await (const fileEvent of poll(opts)) {
-      if (cancelled) break;
+  (async () => {
+    for await (const fileEvent of watcher) {
       opts.handle(fileEvent);
     }
   })();
 
   return {
-    cancel(): void {
-      cancelled = true;
-    }
+    abort: async () => {
+      controller.abort();
+      await watcher.return(undefined);
+    },
   };
 }

@@ -1,4 +1,4 @@
-import { walk, WalkOptions, delay } from "./deps.ts";
+import { delay, walk, WalkOptions } from "./deps.ts";
 
 export type EventType = "created" | "modified" | "removed";
 
@@ -16,28 +16,32 @@ export type PollOptions = {
   batch?: boolean;
   interval?: number;
   walkOptions?: WalkOptions;
+  signal?: AbortSignal;
 };
 
 const defaultWalkOptions = {
   includeDirs: false,
-  exts: [".js", ".ts", ".tsx"]
+  exts: [".js", ".ts", ".tsx"],
 };
 
 export async function* poll({
   root = Deno.cwd(),
   batch = false,
   interval = 100,
-  walkOptions
+  walkOptions,
+  signal,
 }: PollOptions = {}): AsyncGenerator<FileEvent | FileEventBatch> {
   const finalWalkOptions = { ...defaultWalkOptions, ...walkOptions };
+  const eventBatch = new EventBatch();
   let files = await collectFiles(root, finalWalkOptions);
-  let eventBatch = new EventBatch();
   let latestFiles;
 
   while (true) {
+    if (signal?.aborted) break;
+
     latestFiles = await collectFiles(root, finalWalkOptions);
 
-    for (const [filename, info] of latestFiles) {
+    for (const [filename, latestInfo] of latestFiles) {
       if (!files.has(filename)) {
         if (batch) {
           eventBatch.created.push(filename);
@@ -45,7 +49,9 @@ export async function* poll({
           yield { type: "created", path: filename };
         }
         files.delete(filename);
-      } else if (files.get(filename)?.modified !== info.modified) {
+      } else if (
+        files.get(filename)?.mtime?.toString() !== latestInfo.mtime?.toString()
+      ) {
         if (batch) {
           eventBatch.modified.push(filename);
         } else {
@@ -80,16 +86,16 @@ type FileMap = Map<string, Deno.FileInfo>;
 
 async function collectFiles(
   root: string,
-  options: WalkOptions
+  options: WalkOptions,
 ): Promise<FileMap> {
   const walkResults = walk(root, {
     includeDirs: false,
     exts: [".js", ".ts", ".tsx"],
-    ...options
+    ...options,
   });
   const files: FileMap = new Map();
-  for await (const { filename, info } of walkResults) {
-    files.set(filename, info);
+  for await (const { name, path } of walkResults) {
+    files.set(name, await Deno.stat(path));
   }
   return files;
 }

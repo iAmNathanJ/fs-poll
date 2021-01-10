@@ -1,6 +1,6 @@
-export {
-  walk,
+export { walk } from "https://deno.land/std@0.83.0/fs/walk.ts";
+export type {
+  WalkEntry,
   WalkOptions,
-  WalkInfo
-} from "https://deno.land/std@v0.36.0/fs/mod.ts";
-export { delay } from "https://deno.land/std@v0.36.0/util/async.ts";
+} from "https://deno.land/std@0.83.0/fs/walk.ts";
+export { delay } from "https://deno.land/std@0.83.0/async/delay.ts";

@@ -37,6 +37,14 @@ watch({
 });
 ```
 
+### Cancellation
+The `watch` function returns an `abort` property to programmatically cancel polling.
+```ts
+const { abort } = watch({ handle: console.log });
+
+setTimeout(abort, 5000);
+```
+
 ## Options
 (defaults shown)
 ```ts
